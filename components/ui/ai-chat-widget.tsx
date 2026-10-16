@@ -68,22 +68,28 @@ export default function ChatWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userText }),
       });
+
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
       const data = await res.json();
+      const reply = typeof data?.text === "string" ? data.text : "";
+
+      if (!reply) throw new Error("Empty response");
 
       setMessages((prev) => [...prev, {
         id: Math.random().toString(),
         role: "assistant",
-        text: data.text,
+        text: reply,
         offers: [
           { id: "oxibet", logo: "/assets/oxibet.svg", tag: "WEEKEND PROMOTION", title: "500% up to €4,500", terms: "min deposit €20 · wagering 30x" },
           { id: "crusino", logo: "/assets/crusino.svg", tag: "DAILY RELOAD", title: "150 Free Spins", terms: "min deposit €20 · wagering 30x" }
         ]
       }]);
-    } catch (err: any) {
+    } catch {
       setMessages((prev) => [...prev, {
         id: Math.random().toString(),
         role: "assistant",
-        text: `AI INFRASTRUCTURE ERROR: ${err.message}`,
+        text: "The assistant could not respond right now. Please try again.",
       }]);
     } finally {
       setPhase("idle");

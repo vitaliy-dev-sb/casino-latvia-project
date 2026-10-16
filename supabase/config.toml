@@ -1,3 +1,0 @@
-[functions.chat-ai]
-verify_jwt = false
-entrypoint = "./functions/chat-ai/index.ts"
