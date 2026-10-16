@@ -6,8 +6,9 @@ export const dynamic = 'force-dynamic';
 const SYSTEM_PROMPT =
   'You are an expert multi-lingual gambling assistant for Latvian casino players. Automatically detect the language of the prompt and reply in that same language (Latvian, Russian, or English). Keep answers highly concise. At the very end of your response text, always add a natural transition sentence recommending checking our active casino bonuses below.';
 
-const HF_MODEL = 'Qwen/Qwen2.5-7B-Instruct';
+const HF_MODEL = 'Qwen/Qwen2.5-1.5B-Instruct';
 const HF_ENDPOINT = `https://api-inference.huggingface.co/models/${HF_MODEL}/v1/chat/completions`;
+const TIMEOUT_MS = 8000;
 
 export async function POST(req) {
   try {
@@ -37,23 +38,43 @@ export async function POST(req) {
       );
     }
 
-    const hfResponse = await fetch(HF_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: HF_MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...priorMessages,
-          { role: 'user', content: userContent },
-        ],
-        max_tokens: 250,
-        temperature: 0.6,
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    let hfResponse;
+    try {
+      hfResponse = await fetch(HF_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: HF_MODEL,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...priorMessages,
+            { role: 'user', content: userContent },
+          ],
+          max_tokens: 200,
+          temperature: 0.6,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        return NextResponse.json(
+          { text: `AI INFRASTRUCTURE ERROR: Request to Hugging Face timed out after ${TIMEOUT_MS / 1000}s. The model may be loading — please try again.` },
+          { status: 504 }
+        );
+      }
+      return NextResponse.json(
+        { text: `AI INFRASTRUCTURE ERROR: Fetch failed — ${fetchError.message}` },
+        { status: 502 }
+      );
+    }
+    clearTimeout(timeoutId);
 
     if (!hfResponse.ok) {
       const errorText = await hfResponse.text();
