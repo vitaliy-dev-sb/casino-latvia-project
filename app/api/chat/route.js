@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const HF_MODEL = 'meta-llama/Llama-3.1-8B-Instruct';
