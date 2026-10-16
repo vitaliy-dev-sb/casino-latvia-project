@@ -79,12 +79,11 @@ export default function ChatWidget() {
           { id: "crusino", logo: "/assets/crusino.svg", tag: "DAILY RELOAD", title: "150 Free Spins", terms: "min deposit €20 · wagering 30x" }
         ]
       }]);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
       setMessages((prev) => [...prev, {
         id: Math.random().toString(),
         role: "assistant",
-        text: "AI CONNECTION ERROR: Please try again.",
+        text: `AI INFRASTRUCTURE ERROR: ${err.message}`,
       }]);
     } finally {
       setPhase("idle");
