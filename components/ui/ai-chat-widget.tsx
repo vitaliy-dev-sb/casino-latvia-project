@@ -62,12 +62,28 @@ export default function ChatWidget() {
     setValue("");
     setPhase("think");
 
+    const systemPrompt =
+      "You are an expert multi-lingual gambling assistant for Latvian casino players. Automatically detect the prompt language and reply in that same language (Latvian, Russian, or English). Keep answers concise. At the very end of your response, always recommend checking active casino bonuses below.";
+
+    const prompt =
+      `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${systemPrompt}<|eot_id|>\n` +
+      `<|start_header_id|>user<|end_header_id|>\n\n${userText}<|eot_id|>\n` +
+      `<|start_header_id|>assistant<|end_header_id|>\n\n`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ message: userText }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
 
@@ -86,6 +102,7 @@ export default function ChatWidget() {
         ]
       }]);
     } catch {
+      clearTimeout(timeoutId);
       setMessages((prev) => [...prev, {
         id: Math.random().toString(),
         role: "assistant",
